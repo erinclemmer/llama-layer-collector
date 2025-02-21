@@ -1,6 +1,6 @@
 import torch
 from helpers import update_causal_mask
-from transformers.models.llama.modeling_llama import LlamaDecoderLayer, LlamaConfig, LlamaRotaryEmbedding
+from transformers.models.llama.modeling_llama import LlamaDecoderLayer, LlamaConfig, LlamaRotaryEmbedding, LlamaRMSNorm
 
 class LLmComputationState:
     state: torch.Tensor
@@ -37,3 +37,12 @@ def compute_layer(
         cache_position=state.cache_position,
         position_embeddings=state.position_embeddings
     )[0]
+
+def compute_head(
+        head: torch.nn.Linear,
+        state: torch.Tensor,
+        topk: int = 1
+    ) -> torch.Tensor:
+    state = head(state[:, -1, :])
+    probs = torch.softmax(state, dim=-1)
+    return torch.topk(probs, topk).indices

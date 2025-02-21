@@ -8,7 +8,7 @@ from transformers.models.llama.modeling_llama import LlamaRMSNorm, LlamaDecoderL
 
 from load_layer import load_layers
 from cache import build_cache_data
-from helpers import layers_to_load_by_memory, load_shard_tensor
+from helpers import load_shard_tensor
 
 CACHE_FILE_NAME = 'cache.json'
 
@@ -102,17 +102,14 @@ class LayerDataCollector:
     def _load_shard_tensor(self, layer_name: str, device: str) -> torch.Tensor:
         return load_shard_tensor(self.layer_files, self.model_dir, layer_name, device, self.dtype)
 
-    def _layers_to_load_by_memory(self, start_layer: int, max_memory: int) -> int:
-        return layers_to_load_by_memory(start_layer, max_memory, self.num_layers, self.layer_size_cache)
-
-    def input_embedding(self, device: str = None) -> torch.nn.Embedding:
+    def load_input_embedding(self, device: str = None) -> torch.nn.Embedding:
         if self.verbose:
             print('Loading input embedding')
         
         device = self.device if device is None else device
         return torch.nn.Embedding.from_pretrained(self._load_shard_tensor(self.input_embedding_layer_name, device))
     
-    def norm(self, device: str = None) -> LlamaRMSNorm:
+    def load_norm(self, device: str = None) -> LlamaRMSNorm:
         if self.verbose:
             print('Loading norm')
         device = self.device if device is None else device
@@ -120,14 +117,14 @@ class LayerDataCollector:
         norm.weight = torch.nn.Parameter(self._load_shard_tensor(self.norm_layer_name, device))
         return norm
     
-    def head(self, device: str = None):
+    def load_head(self, device: str = None):
         if self.verbose:
             print('Loading head')
         device = self.device if device is None else device
         weight = None
         
         if self.lm_head_name is None or not self.lm_head_name in self.layer_files:
-            weight = self.input_embedding(device).weight
+            weight = self.load_input_embedding(device).weight
         else:
             weight = self._load_shard_tensor(self.lm_head_name, device)
 
@@ -137,8 +134,4 @@ class LayerDataCollector:
 
     def load_layer_set(self, start_layer: int, end_layer: int, device: str = None) -> List[LlamaDecoderLayer]:
         device = self.device if device is None else device
-        return load_layers(start_layer, end_layer, self.layer_prefix, self.layer_files, self.config, self.data_dir, device, self.dtype)
-
-    def load_layers_by_memory(self, start_layer: int, max_memory: int, device: str = None) -> List[LlamaDecoderLayer]:
-        end_layer = layers_to_load_by_memory(start_layer, max_memory, self.num_layers, self.layer_size_cache)
-        return self.load_layer_set(start_layer, end_layer, device)
+        return load_layers(start_layer, end_layer, self.layer_prefix, self.layer_files, self.config, self.model_dir, device, self.dtype)
