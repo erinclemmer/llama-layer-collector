@@ -43,13 +43,10 @@ def build_cache_data(
         shard_pattern: str,
         dtype: torch.dtype,
         device: str,
-        config: LlamaConfig,
-        verbose: bool
+        config: LlamaConfig
     ):
     layer_files = { }
     for file in get_shard_files(shard_pattern, model_dir):
-        if verbose:
-            print('Loading shard ' + file)
         full_path = os.path.join(model_dir, file)
         shard: dict = safe_open(full_path, framework='pt', device=device)
         for key in shard.keys():

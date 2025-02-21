@@ -1,9 +1,8 @@
 import os
-from typing import List
 
 import torch
 from safetensors import safe_open
-from transformers.models.llama.modeling_llama import LlamaConfig, AttentionMaskConverter, LlamaModel
+from transformers.models.llama.modeling_llama import LlamaConfig, LlamaModel
 
 def load_shard_tensor(
         layer_file_cache: dict, 
@@ -23,18 +22,6 @@ def update_causal_mask(
         input_tensor: torch.Tensor,
         cache_position: torch.Tensor
     ):
-    if (
-        config._attn_implementation == "sdpa"
-    ):
-        if AttentionMaskConverter._ignore_causal_mask_sdpa(
-            None,
-            inputs_embeds=input_tensor,
-            past_key_values_length=0,
-            sliding_window=config.sliding_window,
-            is_training=False,
-        ):
-            return None
-
     # In case the provided `attention` mask is 2D, we generate a causal mask here (4D).
     return LlamaModel._prepare_4d_causal_attention_mask_with_cache_position(
         None,

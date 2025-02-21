@@ -3,11 +3,15 @@ import json
 import shutil
 import unittest
 
+import torch
 from torch import tensor
 from transformers import AutoTokenizer
 
 from layer_data_collector import LayerDataCollector
 from compute import compute_embedding, compute_head, compute_layer
+from cache import get_size_of_layer, get_shard_files
+from helpers import load_shard_tensor
+from load_layer import files_to_load_for_layer
 
 DATA_DIR_1B: str = 'data/Llama3.2-1b-instruct'
 MODEL_DIR_1B: str = 'models/Llama3.2-1b-instruct'
@@ -25,6 +29,13 @@ class LayerDataCollecterTests(unittest.TestCase):
     def setUpClass(cls):
         cls.assertTrue(os.path.exists(MODEL_DIR_1B), "1B Model does not exist for testing, please download Llama3.2-1b-instruct")
         cls.assertTrue(os.path.exists(MODEL_DIR_8B), "8B Model does not exist for testing, please download Llama3-8b")
+        if os.path.exists(DATA_DIR_1B):
+            shutil.rmtree(DATA_DIR_1B)
+        if os.path.exists(DATA_DIR_8B):
+            shutil.rmtree(DATA_DIR_8B)
+
+    @classmethod
+    def tearDownClass(cls):
         if os.path.exists(DATA_DIR_1B):
             shutil.rmtree(DATA_DIR_1B)
         if os.path.exists(DATA_DIR_8B):
@@ -130,6 +141,56 @@ class LayerDataCollecterTests(unittest.TestCase):
             current_token += 1
         print(tokenizer.decode(input_ids[0]))
         self.assertGreater(input_ids.shape[1], original_num_tokens)
+
+    def test_exceptions(self):
+        collector = LayerDataCollector(MODEL_DIR_1B, DATA_DIR_1B)
+        try:
+            get_size_of_layer(-1, torch.float16, collector.config)
+            self.fail("Should have thrown an exception")
+        except ValueError:
+            pass
+        
+        try:
+            get_size_of_layer(100, torch.float16, collector.config)
+            self.fail("Should have thrown an exception")
+        except ValueError:
+            pass
+        
+        try:
+            os.mkdir('test')
+            get_shard_files(collector.shard_pattern, 'test')
+            self.fail("Should have thrown an exception")
+        except Exception:
+            pass
+        os.rmdir('test')
+        
+        try:
+            load_shard_tensor(collector.layer_files, collector.model_dir, 'bad_layer', 'cpu', torch.float16)
+            self.fail("Should have thrown an exception")
+        except ValueError:
+            pass
+
+        try:
+            os.mkdir('bad_dir')
+            LayerDataCollector('bad_dir', DATA_DIR_1B)
+            self.fail("Should have thrown an exception")
+        except FileNotFoundError:
+            pass
+
+        os.rmdir('bad_dir')
+
+        try:
+            shutil.rmtree(DATA_DIR_1B)
+            collector._read_cache()
+            self.fail("Should have thrown an exception")
+        except FileNotFoundError:
+            pass
+        
+        try:
+            files_to_load_for_layer('bad_key', [])
+            self.fail("Should have thrown an exception")
+        except Exception:
+            pass
 
 # If you want to run these tests directly from the command line:
 if __name__ == '__main__':

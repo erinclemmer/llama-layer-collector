@@ -26,7 +26,6 @@ class LayerDataCollector:
 
     num_layers: int
     num_shards: int
-    verbose: bool
     dtype: torch.dtype
     device: str
     layer_files: Dict[str, str]
@@ -41,7 +40,6 @@ class LayerDataCollector:
             input_embedding_layer_name: str = 'model.embed_tokens.weight',
             norm_layer_name: str = 'model.norm.weight',
             lm_head_name: str = 'lm_head.weight',
-            verbose: bool = False,
             dtype: torch.dtype = torch.float16,
             device: str = 'cpu'
         ):
@@ -64,7 +62,6 @@ class LayerDataCollector:
         self.layer_prefix = layer_prefix
         self.norm_layer_name = norm_layer_name
         self.input_embedding_layer_name = input_embedding_layer_name
-        self.verbose = verbose
         self.shard_pattern = shard_pattern
 
         self.dtype = dtype
@@ -89,10 +86,7 @@ class LayerDataCollector:
         self.layer_size_cache = cache_data['layer_sizes']
 
     def _build_cache(self):
-        if self.verbose:
-            print('Building cache')
-        
-        cache_data = build_cache_data(self.model_dir, self.shard_pattern, self.dtype, self.device, self.config, self.verbose)
+        cache_data = build_cache_data(self.model_dir, self.shard_pattern, self.dtype, self.device, self.config)
         
         if not os.path.exists(self.data_dir):
             os.mkdir(self.data_dir)
@@ -103,23 +97,16 @@ class LayerDataCollector:
         return load_shard_tensor(self.layer_files, self.model_dir, layer_name, device, self.dtype)
 
     def load_input_embedding(self, device: str = None) -> torch.nn.Embedding:
-        if self.verbose:
-            print('Loading input embedding')
-        
         device = self.device if device is None else device
         return torch.nn.Embedding.from_pretrained(self._load_shard_tensor(self.input_embedding_layer_name, device))
     
     def load_norm(self, device: str = None) -> LlamaRMSNorm:
-        if self.verbose:
-            print('Loading norm')
         device = self.device if device is None else device
         norm = LlamaRMSNorm(self.config.hidden_size, eps=self.config.rms_norm_eps)
         norm.weight = torch.nn.Parameter(self._load_shard_tensor(self.norm_layer_name, device))
         return norm
     
     def load_head(self, device: str = None):
-        if self.verbose:
-            print('Loading head')
         device = self.device if device is None else device
         weight = None
         

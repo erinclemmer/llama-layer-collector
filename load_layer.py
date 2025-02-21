@@ -59,10 +59,7 @@ def load_layers(
         for key in shard_data.keys():
             if key.startswith(f'{layer_prefix}{i}.'):
                 layer_data[key.replace(f'{layer_prefix}{i}.', '')] = shard_data[key].detach()
-        try:
-            lyr.load_state_dict(layer_data)
-        except:
-            raise Exception("Could not load layer data for layer " + str(i))
+        lyr.load_state_dict(layer_data)
         layers.append(lyr)
 
     return layers
