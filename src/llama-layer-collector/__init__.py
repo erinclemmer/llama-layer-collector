@@ -1,2 +1,2 @@
-from llama_layer_collector import LlamaLayerCollector
+from layer_collector import LlamaLayerCollector
 import compute

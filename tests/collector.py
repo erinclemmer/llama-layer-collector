@@ -9,7 +9,7 @@ from transformers import AutoTokenizer
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../src/llama-layer-collector'))
 
-from llama_layer_collector import LlamaLayerCollector
+from layer_collector import LlamaLayerCollector
 from compute import compute_embedding, compute_head, compute_layer
 from cache import get_shard_files
 from helpers import load_shard_tensor
