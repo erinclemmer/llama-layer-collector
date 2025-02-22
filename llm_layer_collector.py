@@ -12,7 +12,7 @@ from helpers import load_shard_tensor
 
 CACHE_FILE_NAME = 'cache.json'
 
-class LayerDataCollector:
+class LlmLayerCollector:
     layer_prefix: str
     norm_layer_name: str
     input_embedding_layer_name: str
@@ -22,7 +22,7 @@ class LayerDataCollector:
     config: LlamaConfig
     
     model_dir: str
-    data_dir: str
+    cache_file: str
 
     num_layers: int
     num_shards: int
@@ -34,7 +34,7 @@ class LayerDataCollector:
     def __init__(
             self, 
             model_dir: str,
-            data_dir: str,
+            cache_file: str,
             shard_pattern: str = r'model-(\d+)-of-(\d+).safetensors',
             layer_prefix: str = 'model.layers.',
             input_embedding_layer_name: str = 'model.embed_tokens.weight',
@@ -53,10 +53,7 @@ class LayerDataCollector:
 
         
         self.model_dir = model_dir
-        self.data_dir = data_dir
-        
-        if not os.path.exists(self.data_dir):
-            Path(self.data_dir).mkdir(parents=True)
+        self.cache_file = cache_file
         
         self.lm_head_name = lm_head_name
         self.layer_prefix = layer_prefix
@@ -68,18 +65,14 @@ class LayerDataCollector:
         self.device = device
         self.layer_files = { }
         self.layer_size_cache = []
-        if not os.path.exists(self._cache_file()):
+        if not os.path.exists(self.cache_file):
             self._build_cache()
         self._read_cache()
 
-    def _cache_file(self) -> str:
-        return os.path.join(self.data_dir, CACHE_FILE_NAME)
-
     def _read_cache(self):
-        cache_file = os.path.join(self.data_dir, CACHE_FILE_NAME)
-        if not os.path.exists(cache_file):
-            raise FileNotFoundError('Could not find cache file ' + cache_file)
-        with open(cache_file, 'r', encoding='utf-8') as f:
+        if not os.path.exists(self.cache_file):
+            raise FileNotFoundError('Could not find cache file ' + self.cache_file)
+        with open(self.cache_file, 'r', encoding='utf-8') as f:
             cache_data = json.load(f)
     
         self.layer_files = cache_data['layer_files']
@@ -87,10 +80,7 @@ class LayerDataCollector:
 
     def _build_cache(self):
         cache_data = build_cache_data(self.model_dir, self.shard_pattern, self.dtype, self.device, self.config)
-        
-        if not os.path.exists(self.data_dir):
-            os.mkdir(self.data_dir)
-        with open(self._cache_file(), 'w', encoding='utf-8') as f:
+        with open(self.cache_file, 'w', encoding='utf-8') as f:
             json.dump(cache_data, f, indent=4)
 
     def _load_shard_tensor(self, layer_name: str, device: str) -> torch.Tensor:
