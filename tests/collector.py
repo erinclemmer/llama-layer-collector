@@ -7,7 +7,7 @@ import torch
 from torch import tensor
 from transformers import AutoTokenizer
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../src/llama-layer-collector'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../src/llama_layer_collector'))
 
 from layer_collector import LlamaLayerCollector
 from compute import compute_embedding, compute_head, compute_layer
