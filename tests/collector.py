@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import unittest
 
@@ -6,11 +7,13 @@ import torch
 from torch import tensor
 from transformers import AutoTokenizer
 
-from src.llama_layer_collector.llama_layer_collector import LlamaLayerCollector
-from src.llama_layer_collector.compute import compute_embedding, compute_head, compute_layer
-from src.llama_layer_collector.cache import get_size_of_layer, get_shard_files
-from src.llama_layer_collector.helpers import load_shard_tensor
-from src.llama_layer_collector.load_layer import files_to_load_for_layer
+sys.path.append(os.path.join(os.path.dirname(__file__), '../src/llama-layer-collector'))
+
+from llama_layer_collector import LlamaLayerCollector
+from compute import compute_embedding, compute_head, compute_layer
+from cache import get_size_of_layer, get_shard_files
+from helpers import load_shard_tensor
+from load_layer import files_to_load_for_layer
 
 CACHE_FILE_1B: str = 'data/Llama3.2-1b-instruct-cache.json'
 MODEL_DIR_1B: str = 'models/Llama3.2-1b-instruct'
@@ -185,12 +188,12 @@ class LlamaLayerCollectorTests(unittest.TestCase):
             pass
         
         try:
-            os.mkdir('test')
-            get_shard_files(collector.shard_pattern, 'test')
+            os.mkdir('shard_test')
+            get_shard_files(collector.shard_pattern, 'shard_test')
             self.fail("Should have thrown an exception")
         except Exception:
             pass
-        os.rmdir('test')
+        os.rmdir('shard_test')
         
         try:
             load_shard_tensor(collector.layer_files, collector.model_dir, 'bad_layer', 'cpu', torch.float16)
