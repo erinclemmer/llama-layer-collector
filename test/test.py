@@ -1,17 +1,16 @@
 import os
 import json
-import shutil
 import unittest
 
 import torch
 from torch import tensor
 from transformers import AutoTokenizer
 
-from llama_layer_collector import LlamaLayerCollector
-from compute import compute_embedding, compute_head, compute_layer
-from cache import get_size_of_layer, get_shard_files
-from helpers import load_shard_tensor
-from load_layer import files_to_load_for_layer
+from src.llama_layer_collector.llama_layer_collector import LlamaLayerCollector
+from src.llama_layer_collector.compute import compute_embedding, compute_head, compute_layer
+from src.llama_layer_collector.cache import get_size_of_layer, get_shard_files
+from src.llama_layer_collector.helpers import load_shard_tensor
+from src.llama_layer_collector.load_layer import files_to_load_for_layer
 
 CACHE_FILE_1B: str = 'data/Llama3.2-1b-instruct-cache.json'
 MODEL_DIR_1B: str = 'models/Llama3.2-1b-instruct'
