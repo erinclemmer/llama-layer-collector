@@ -13,7 +13,7 @@ def compute_embedding(
         input_embedder: torch.nn.Embedding,
         input_ids: torch.Tensor,
         config: LlamaConfig
-    ):
+    ) -> LLmComputationState:
     embedded_input = input_embedder(input_ids.to(input_embedder.weight.device))
     state = LLmComputationState()
     state.state = embedded_input

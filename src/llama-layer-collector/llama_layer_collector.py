@@ -97,7 +97,7 @@ class LlamaLayerCollector:
         norm.weight = torch.nn.Parameter(self._load_shard_tensor(self.norm_layer_name, device))
         return norm
     
-    def load_head(self, device: str = None):
+    def load_head(self, device: str = None) -> torch.nn.Linear:
         device = self.device if device is None else device
         weight = None
         

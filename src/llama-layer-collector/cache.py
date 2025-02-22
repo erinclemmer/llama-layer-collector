@@ -7,7 +7,7 @@ import torch
 from safetensors import safe_open
 from transformers.models.llama.modeling_llama import LlamaConfig, LlamaDecoderLayer
 
-def size_of_tensor(t: torch.Tensor):
+def size_of_tensor(t: torch.Tensor) -> int:
     return t.element_size() * t.nelement()
 
 def get_size_of_layer(layer_idx: int, dtype: torch.dtype, config: LlamaConfig) -> int:

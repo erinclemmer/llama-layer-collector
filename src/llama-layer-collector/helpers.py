@@ -21,7 +21,7 @@ def update_causal_mask(
         config: LlamaConfig,
         input_tensor: torch.Tensor,
         cache_position: torch.Tensor
-    ):
+    ) -> torch.Tensor:
     # In case the provided `attention` mask is 2D, we generate a causal mask here (4D).
     return LlamaModel._prepare_4d_causal_attention_mask_with_cache_position(
         None,
