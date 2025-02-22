@@ -142,6 +142,35 @@ class LlmLayerCollectorTests(unittest.TestCase):
         print(tokenizer.decode(input_ids[0]))
         self.assertGreater(input_ids.shape[1], original_num_tokens)
 
+    def test_stack_1B_no_cache_file(self):
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR_1B)
+        input_ids = tokenizer(PROMPT, return_tensors='pt')['input_ids']
+        original_num_tokens = input_ids.shape[1]
+        num_tokens = 4
+        current_token = 0
+        os.remove(CACHE_FILE_1B)
+        collector = LlmLayerCollector(MODEL_DIR_1B)
+        self.assertFalse(os.path.exists(CACHE_FILE_1B))
+        self.assertTrue(collector.layer_files is not None)
+        self.assertTrue(collector.layer_size_cache is not None)
+        input_embedder = collector.load_input_embedding()
+        head = collector.load_head()
+        norm = collector.load_norm()
+        layers = collector.load_layer_set(0, 15)
+        while current_token < num_tokens:
+            state = compute_embedding(input_embedder, input_ids, collector.config)
+            for lyr in layers:
+                state.state = compute_layer(lyr, state)
+            topk = 1
+            result = compute_head(head, norm(state.state), topk)
+            self.assertEqual(result.shape, (1, topk))
+            token_list = input_ids.tolist()[0]
+            token_list.append(result[0][0].item())
+            input_ids = tensor([token_list])
+            current_token += 1
+        print(tokenizer.decode(input_ids[0]))
+        self.assertGreater(input_ids.shape[1], original_num_tokens)
+
     def test_exceptions(self):
         collector = LlmLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
         try:

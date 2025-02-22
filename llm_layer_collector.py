@@ -34,7 +34,7 @@ class LlmLayerCollector:
     def __init__(
             self, 
             model_dir: str,
-            cache_file: str,
+            cache_file: str = None,
             shard_pattern: str = r'model-(\d+)-of-(\d+).safetensors',
             layer_prefix: str = 'model.layers.',
             input_embedding_layer_name: str = 'model.embed_tokens.weight',
@@ -65,9 +65,10 @@ class LlmLayerCollector:
         self.device = device
         self.layer_files = { }
         self.layer_size_cache = []
-        if not os.path.exists(self.cache_file):
+        if self.cache_file is None or not os.path.exists(self.cache_file):
             self._build_cache()
-        self._read_cache()
+        else:
+            self._read_cache()
 
     def _read_cache(self):
         if not os.path.exists(self.cache_file):
@@ -80,8 +81,11 @@ class LlmLayerCollector:
 
     def _build_cache(self):
         cache_data = build_cache_data(self.model_dir, self.shard_pattern, self.dtype, self.device, self.config)
-        with open(self.cache_file, 'w', encoding='utf-8') as f:
-            json.dump(cache_data, f, indent=4)
+        self.layer_files = cache_data['layer_files']
+        self.layer_size_cache = cache_data['layer_sizes']
+        if self.cache_file is not None:
+            with open(self.cache_file, 'w', encoding='utf-8') as f:
+                json.dump(cache_data, f, indent=4)
 
     def _load_shard_tensor(self, layer_name: str, device: str) -> torch.Tensor:
         return load_shard_tensor(self.layer_files, self.model_dir, layer_name, device, self.dtype)
