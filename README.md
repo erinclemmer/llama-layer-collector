@@ -112,7 +112,7 @@ norm = collector.load_norm()
 head = collector.load_head()  
 
 # Load a set of decoder layers (in this example, all layers). 
-layers = collector.load_layer_set(0, collector.num_layers)  
+layers = collector.load_layer_set(0, collector.num_layers - 1)  
 
 # Perform a forward pass using the helper computation functions. 
 state = compute_embedding(embedding, input_ids, collector.config) 
