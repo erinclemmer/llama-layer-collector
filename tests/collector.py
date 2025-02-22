@@ -11,7 +11,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../src/llama-layer-coll
 
 from llama_layer_collector import LlamaLayerCollector
 from compute import compute_embedding, compute_head, compute_layer
-from cache import get_size_of_layer, get_shard_files
+from cache import get_shard_files
 from helpers import load_shard_tensor
 from load_layer import files_to_load_for_layer
 
@@ -46,24 +46,20 @@ class LlamaLayerCollectorTests(unittest.TestCase):
     def test_cache_1B(self):
         collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
         self.assertEqual(len(collector.layer_files.keys()), NUM_KEYS_1B)
-        self.assertEqual(len(collector.layer_size_cache), collector.num_layers)
         self.assertTrue(os.path.exists(CACHE_FILE_1B))
         self.assertTrue(os.path.exists(collector.cache_file))
         with open(CACHE_FILE_1B, 'r') as f:
             cache = json.load(f)
-            self.assertEqual(len(cache['layer_files'].keys()), NUM_KEYS_1B)
-            self.assertEqual(len(cache['layer_sizes']), collector.num_layers)
+            self.assertEqual(len(cache.keys()), NUM_KEYS_1B)
 
     def test_cache_8B(self):
         collector = LlamaLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
         self.assertEqual(len(collector.layer_files.keys()), NUM_KEYS_8B)
-        self.assertEqual(len(collector.layer_size_cache), collector.num_layers)
         self.assertTrue(os.path.exists(CACHE_FILE_8B))
         self.assertTrue(os.path.exists(collector.cache_file))
         with open(collector.cache_file, 'r') as f:
             cache = json.load(f)
-            self.assertEqual(len(cache['layer_files'].keys()), NUM_KEYS_8B)
-            self.assertEqual(len(cache['layer_sizes']), collector.num_layers)
+            self.assertEqual(len(cache.keys()), NUM_KEYS_8B)
     
     def test_input_embedding_1B(self):
         collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
@@ -154,7 +150,6 @@ class LlamaLayerCollectorTests(unittest.TestCase):
         collector = LlamaLayerCollector(MODEL_DIR_1B)
         self.assertFalse(os.path.exists(CACHE_FILE_1B))
         self.assertTrue(collector.layer_files is not None)
-        self.assertTrue(collector.layer_size_cache is not None)
         input_embedder = collector.load_input_embedding()
         head = collector.load_head()
         norm = collector.load_norm()
@@ -175,18 +170,7 @@ class LlamaLayerCollectorTests(unittest.TestCase):
 
     def test_exceptions(self):
         collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
-        try:
-            get_size_of_layer(-1, torch.float16, collector.config)
-            self.fail("Should have thrown an exception")
-        except ValueError:
-            pass
-        
-        try:
-            get_size_of_layer(100, torch.float16, collector.config)
-            self.fail("Should have thrown an exception")
-        except ValueError:
-            pass
-        
+
         try:
             os.mkdir('shard_test')
             get_shard_files(collector.shard_pattern, 'shard_test')

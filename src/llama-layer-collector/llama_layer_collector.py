@@ -26,7 +26,6 @@ class LlamaLayerCollector:
     dtype: torch.dtype
     device: str
     layer_files: Dict[str, str]
-    layer_sizes: Dict[str, int]
 
     def __init__(
             self, 
@@ -61,7 +60,6 @@ class LlamaLayerCollector:
         self.dtype = dtype
         self.device = device
         self.layer_files = { }
-        self.layer_size_cache = []
         if self.cache_file is None or not os.path.exists(self.cache_file):
             self._build_cache()
         else:
@@ -71,18 +69,13 @@ class LlamaLayerCollector:
         if not os.path.exists(self.cache_file):
             raise FileNotFoundError('Could not find cache file ' + self.cache_file)
         with open(self.cache_file, 'r', encoding='utf-8') as f:
-            cache_data = json.load(f)
-    
-        self.layer_files = cache_data['layer_files']
-        self.layer_size_cache = cache_data['layer_sizes']
+            self.layer_files = json.load(f)
 
     def _build_cache(self):
-        cache_data = build_cache_data(self.model_dir, self.shard_pattern, self.dtype, self.device, self.config)
-        self.layer_files = cache_data['layer_files']
-        self.layer_size_cache = cache_data['layer_sizes']
+        self.layer_files = build_cache_data(self.model_dir, self.shard_pattern, self.device)
         if self.cache_file is not None:
             with open(self.cache_file, 'w', encoding='utf-8') as f:
-                json.dump(cache_data, f, indent=4)
+                json.dump(self.layer_files, f, indent=4)
 
     def _load_shard_tensor(self, layer_name: str, device: str) -> torch.Tensor:
         return load_shard_tensor(self.layer_files, self.model_dir, layer_name, device, self.dtype)

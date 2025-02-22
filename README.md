@@ -1,6 +1,9 @@
 Llama Model Layer Loader
 ========================
 
+![PyPI - Version](https://img.shields.io/pypi/v/llama-layer-collector)
+
+
 A lightweight Python utility to selectively load layers from sharded Llama model checkpoints. This project facilitates efficient loading and caching of model components, enabling flexible layer-level manipulation and inference for Llama-based models.
 
 * * *
@@ -66,32 +69,10 @@ Features
 Installation
 ------------
 
-### Prerequisites
-
-*   Python 3.10 (this is the highest version that works with cuda support for pytorch)
-*   PyTorch
-*   [Transformers](https://github.com/huggingface/transformers)
-*   [Safetensors](https://github.com/huggingface/safetensors)
-
-### Setup
-
-1.  **Clone the Repository:**
-    
-    bash
-    
-    Copy code
-    
-    `git clone https://github.com/your-username/llama-layer-loader.git cd llama-layer-loader`
-    
-2.  **Install Dependencies:**
-    
-    It is recommended to use a virtual environment. Then, install the required packages:
-    
-    bash
-    
-    Copy code
-    
-    `pip install torch transformers safetensors`
+Install from pypi database:
+```bash
+python -m pip install llama-layer-collector
+```
     
 3.  **Project Files:**
     
@@ -109,19 +90,28 @@ Installation
 Usage
 -----
 
-Below is a simple example demonstrating how to use the `LlamaLayerCollector`:
+Below is a simple example demonstrating how to use the `LlamaLayerCollector` to generate a token:
 ```python
-from llama_layer_collector import LlamaLayerCollector  # Specify the directory containing your model checkpoints and configuration. 
+from llama_layer_collector import LlamaLayerCollector  
+from llama_layer_collector.compute import compute_embedding, compute_head, compute_layer
+from transformers import AutoTokenizer
 
+# Specify the directory containing your model checkpoints and configuration. 
 model_directory = "/path/to/llama/model" 
 cache_file = "model_cache.json"  
+
 # Create a collector instance with desired settings. 
 collector = LlamaLayerCollector(     
     model_dir=model_directory,     
     cache_file=cache_file,     
     device="cuda",  # or "cpu"     
     dtype=torch.float16
-)  
+)
+
+# Load tokenizer from transformers
+tokenizer = AutoTokenizer.from_pretrained("/path/to/llama/model")
+input_ids = tokenizer("The quick brown fox ", return_tensors='pt')['input_ids']
+
 # Load the input embedding layer. 
 embedding = collector.load_input_embedding()  
 
@@ -134,7 +124,11 @@ head = collector.load_head()
 # Load a set of decoder layers, for example, all layers. 
 layers = collector.load_layer_set(0, collector.num_layers)  
 
-# Now you can integrate these components into your model architecture.
+state = compute_embedding(embedding, input_ids, collector.config)
+for lyr in layers:
+    state.state = compute_layer(lyr, state)
+result = compute_head(head, norm(state.state), topk=1)
+print(f'token ID: {result}')
 ```
 
 * * *
