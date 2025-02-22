@@ -3,7 +3,7 @@ requires = ["hatchling", "transformers", "torch", "safetensors"]
 build-backend = "hatchling.build"
 
 [project]
-name = "llama_layer_collector"
+name = "llama-layer-collector"
 version = "1.0.0"
 authors = [{name="Erin Clemmer", email="erin.c.clemmer@gmail.com"}]
 description = "A tool for loading and computing on parts of Llama models."
@@ -23,5 +23,5 @@ classifiers = [
 requires-python = "==3.10"
 
 [project.urls]
-Homepage = "https://github.com/erinclemmer/llama_layer_collector"
-Issues = "https://github.com/erinclemmer/llama_layer_collector/issues"
+Homepage = "https://github.com/erinclemmer/llama-layer-collector"
+Issues = "https://github.com/erinclemmer/llama-layer-collector/issues"
