@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "llama-layer-collector"
-version = "1.0.5"
+version = "1.0.6"
 authors = [{name="Erin Clemmer", email="erin.c.clemmer@gmail.com"}]
 description = "A tool for loading and computing on parts of Llama models."
 keywords = ["llama", "transformers", "torch", "safetensors"]
@@ -21,6 +21,11 @@ classifiers = [
     "Typing :: Typed"
 ]
 requires-python = ">=3.10"
+dependencies = [
+    "transformers",
+    "torch",
+    "safetensors"
+]
 
 [project.urls]
 Homepage = "https://github.com/erinclemmer/llama-layer-collector"
