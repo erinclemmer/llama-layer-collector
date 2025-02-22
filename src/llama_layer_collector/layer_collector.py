@@ -5,9 +5,9 @@ from typing import List, Dict
 import torch
 from transformers.models.llama.modeling_llama import LlamaRMSNorm, LlamaDecoderLayer, LlamaConfig
 
-from load_layer import load_layers
-from cache import build_cache_data
-from helpers import load_shard_tensor
+from llama_layer_collector.load_layer import load_layers
+from llama_layer_collector.cache import build_cache_data
+from llama_layer_collector.helpers import load_shard_tensor
 
 class LlamaLayerCollector:
     layer_prefix: str

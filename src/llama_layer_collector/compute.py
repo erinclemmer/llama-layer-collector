@@ -1,5 +1,5 @@
 import torch
-from helpers import update_causal_mask
+from llama_layer_collector.helpers import update_causal_mask
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer, LlamaConfig, LlamaRotaryEmbedding, LlamaRMSNorm
 
 class LLmComputationState:

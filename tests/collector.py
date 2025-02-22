@@ -7,13 +7,13 @@ import torch
 from torch import tensor
 from transformers import AutoTokenizer
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../src/llama_layer_collector'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
 
-from layer_collector import LlamaLayerCollector
-from compute import compute_embedding, compute_head, compute_layer
-from cache import get_shard_files
-from helpers import load_shard_tensor
-from load_layer import files_to_load_for_layer
+from llama_layer_collector.layer_collector import LlamaLayerCollector
+from llama_layer_collector.compute import compute_embedding, compute_head, compute_layer
+from llama_layer_collector.cache import get_shard_files
+from llama_layer_collector.helpers import load_shard_tensor
+from llama_layer_collector.load_layer import files_to_load_for_layer
 
 CACHE_FILE_1B: str = 'data/Llama3.2-1b-instruct-cache.json'
 MODEL_DIR_1B: str = 'models/Llama3.2-1b-instruct'

@@ -1,6 +1,5 @@
 import re
 import os
-import gc
 from typing import List
 
 from safetensors import safe_open
