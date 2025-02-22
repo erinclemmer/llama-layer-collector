@@ -1,3 +1,0 @@
-Add computation helper functions
-Add tests
-instead of data directory, only use cache file

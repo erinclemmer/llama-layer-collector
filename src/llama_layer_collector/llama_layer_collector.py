@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 import json
 from typing import List, Dict
 
@@ -10,9 +9,7 @@ from load_layer import load_layers
 from cache import build_cache_data
 from helpers import load_shard_tensor
 
-CACHE_FILE_NAME = 'cache.json'
-
-class LlmLayerCollector:
+class LlamaLayerCollector:
     layer_prefix: str
     norm_layer_name: str
     input_embedding_layer_name: str

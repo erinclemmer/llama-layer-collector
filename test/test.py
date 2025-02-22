@@ -7,7 +7,7 @@ import torch
 from torch import tensor
 from transformers import AutoTokenizer
 
-from llm_layer_collector import LlmLayerCollector
+from llama_layer_collector import LlamaLayerCollector
 from compute import compute_embedding, compute_head, compute_layer
 from cache import get_size_of_layer, get_shard_files
 from helpers import load_shard_tensor
@@ -24,7 +24,7 @@ NUM_KEYS_8B = 291
 
 PROMPT = "The quick brown fox jumps over the "
 
-class LlmLayerCollectorTests(unittest.TestCase):
+class LlamaLayerCollectorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.assertTrue(os.path.exists(MODEL_DIR_1B), "1B Model does not exist for testing, please download Llama3.2-1b-instruct")
@@ -42,7 +42,7 @@ class LlmLayerCollectorTests(unittest.TestCase):
             os.remove(CACHE_FILE_8B)
 
     def test_cache_1B(self):
-        collector = LlmLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
+        collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
         self.assertEqual(len(collector.layer_files.keys()), NUM_KEYS_1B)
         self.assertEqual(len(collector.layer_size_cache), collector.num_layers)
         self.assertTrue(os.path.exists(CACHE_FILE_1B))
@@ -53,7 +53,7 @@ class LlmLayerCollectorTests(unittest.TestCase):
             self.assertEqual(len(cache['layer_sizes']), collector.num_layers)
 
     def test_cache_8B(self):
-        collector = LlmLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
+        collector = LlamaLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
         self.assertEqual(len(collector.layer_files.keys()), NUM_KEYS_8B)
         self.assertEqual(len(collector.layer_size_cache), collector.num_layers)
         self.assertTrue(os.path.exists(CACHE_FILE_8B))
@@ -64,7 +64,7 @@ class LlmLayerCollectorTests(unittest.TestCase):
             self.assertEqual(len(cache['layer_sizes']), collector.num_layers)
     
     def test_input_embedding_1B(self):
-        collector = LlmLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
+        collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
         input_embedder = collector.load_input_embedding()
         tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR_1B)
         input_ids = tokenizer(PROMPT, return_tensors='pt')['input_ids']
@@ -78,7 +78,7 @@ class LlmLayerCollectorTests(unittest.TestCase):
     def test_input_embedding_8B(self):
         tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR_8B)
         input_ids = tokenizer(PROMPT, return_tensors='pt')['input_ids']
-        collector = LlmLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
+        collector = LlamaLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
         input_embedder = collector.load_input_embedding()
         state = compute_embedding(input_embedder, input_ids, collector.config)
         self.assertEqual(state.state.shape, (1, 9, 4096))
@@ -88,32 +88,32 @@ class LlmLayerCollectorTests(unittest.TestCase):
         self.assertEqual(state.causal_mask.shape, (1, 1, 9, 9))
 
     def test_norm_1B(self):
-        collector = LlmLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
+        collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
         norm = collector.load_norm()
         self.assertEqual(norm.weight.shape, (2048,))
     
     def test_norm_8B(self):
-        collector = LlmLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
+        collector = LlamaLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
         norm = collector.load_norm()
         self.assertEqual(norm.weight.shape, (4096,))
     
     def test_head_1B(self):
-        collector = LlmLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
+        collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
         head = collector.load_head()
         self.assertEqual(head.weight.shape, (128256, 2048))
     
     def test_head_8B(self):
-        collector = LlmLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
+        collector = LlamaLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
         head = collector.load_head()
         self.assertEqual(head.weight.shape, (128256, 4096))
 
     def test_layers_1B(self):
-        collector = LlmLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
+        collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
         layers = collector.load_layer_set(1, 2)
         self.assertEqual(len(layers), 2)
 
     def test_layers_8B(self):
-        collector = LlmLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
+        collector = LlamaLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
         layers = collector.load_layer_set(1, 2)
         self.assertEqual(len(layers), 2)
 
@@ -123,7 +123,7 @@ class LlmLayerCollectorTests(unittest.TestCase):
         original_num_tokens = input_ids.shape[1]
         num_tokens = 4
         current_token = 0
-        collector = LlmLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
+        collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
         input_embedder = collector.load_input_embedding()
         head = collector.load_head()
         norm = collector.load_norm()
@@ -149,7 +149,7 @@ class LlmLayerCollectorTests(unittest.TestCase):
         num_tokens = 4
         current_token = 0
         os.remove(CACHE_FILE_1B)
-        collector = LlmLayerCollector(MODEL_DIR_1B)
+        collector = LlamaLayerCollector(MODEL_DIR_1B)
         self.assertFalse(os.path.exists(CACHE_FILE_1B))
         self.assertTrue(collector.layer_files is not None)
         self.assertTrue(collector.layer_size_cache is not None)
@@ -172,7 +172,7 @@ class LlmLayerCollectorTests(unittest.TestCase):
         self.assertGreater(input_ids.shape[1], original_num_tokens)
 
     def test_exceptions(self):
-        collector = LlmLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
+        collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
         try:
             get_size_of_layer(-1, torch.float16, collector.config)
             self.fail("Should have thrown an exception")
@@ -201,7 +201,7 @@ class LlmLayerCollectorTests(unittest.TestCase):
 
         try:
             os.mkdir('bad_dir')
-            LlmLayerCollector('bad_dir', CACHE_FILE_1B)
+            LlamaLayerCollector('bad_dir', CACHE_FILE_1B)
             self.fail("Should have thrown an exception")
         except FileNotFoundError:
             pass
