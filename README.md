@@ -1,169 +1,113 @@
-Llama Layer Collector
-=====================
+# 🦙 Llama Layer Collector
 
 ![PyPI - Version](https://img.shields.io/pypi/v/llama-layer-collector)
 
-**Llama Layer Collector** is a lightweight Python package for selectively loading and computing on individual layers of Llama-based language models. It is especially helpful when working with large, sharded checkpoints that you’d like to load only partially, or when you need granular access to model internals (embeddings, norms, decoder layers, etc.).
+A practical Python package for working with Llama-based models at the layer level. Designed to help developers and researchers load specific model components when working with large, sharded checkpoints.
 
-* * *
+## ✨ What It Does
 
-Key Features
-------------
+- 🎯 Selective layer loading for more efficient resource usage
+- 🚀 Streamlined handling of model checkpoints
+- 💡 Useful for research, development, and memory-constrained environments
 
-*   **Layer-by-Layer Loading:** Specify which layers to load (e.g., layers `0` through `10`) rather than loading the entire model.
-*   **Caching for Speed:** Create and reuse cached metadata about shard files to avoid repeated scanning of checkpoints.
-*   **Flexible Device & Precision Support:** Easily move layers to CPU or GPU and configure their precision (e.g., `torch.float16`).
-*   **Helper Compute Functions:** Built-in utilities (e.g., `compute_embedding`, `compute_layer`, and `compute_head`) to perform partial or full forward passes without building an entire model class.
+## 🛠️ Core Capabilities
 
-* * *
+Our package excels in four key areas:
 
-Installation
-------------
+### Precision Layer Control
+Select which model components to load, from embedding layers to specific decoder blocks. This helps manage memory usage and processing requirements for your use case.
 
-You can install **Llama Layer Collector** directly from PyPI:
+### Modular Architecture
+Design your model processing pipeline by working with individual components. This approach enables focused testing, targeted optimization, and easier debugging of model behavior.
 
-`pip install llama-layer-collector`
+### Streamlined Computation
+Use helper functions for embedding computation, layer-wise processing, and head operations to simplify working with model components.
 
-* * *
+## 🚀 Getting Started
 
-Class Overview: LlamaLayerCollector
------------------------------------
+### Installation
 
-The **LlamaLayerCollector** is initialized with several parameters that give you fine-grained control over how model layers are discovered and loaded:
+```bash
+pip install llama-layer-collector
+```
 
-*   **model\_dir (str)**  
-    A required path to the directory containing model shards and a `config.json` file.
-    
-*   **cache\_file (str, optional)**  
-    Path to a JSON file used for caching shard metadata. If no cache file is specified, the collector still builds metadata in memory but does not persist it for future runs.
-    
-*   **shard\_pattern (str, optional)**  
-    A regular expression (default: `'model-(\\d+)-of-(\\d+).safetensors'`) indicating how shard files are named.
-    
-*   **layer\_prefix (str, optional)**  
-    The string prefix identifying decoder layer keys in your model checkpoints (default: `'model.layers.'`).
-    
-*   **input\_embedding\_layer\_name (str, optional)**  
-    Name of the input embedding weight parameter (default: `'model.embed_tokens.weight'`).
-    
-*   **norm\_layer\_name (str, optional)**  
-    Name of the RMS norm layer weight parameter (default: `'model.norm.weight'`).
-    
-*   **lm\_head\_name (str, optional)**  
-    Name of the LM head weight parameter (default: `'lm_head.weight'`).
-    
-*   **dtype (torch.dtype, optional)**  
-    Data type (default: `torch.float16`) used when loading all model weights.
-    
-*   **device (str, optional)**  
-    Device on which the loaded tensors will be placed (default: `'cpu'`, though `'cuda'` is common for GPU usage).
-    
+### Essential Components
 
-During initialization, the collector checks for a `config.json` file in `model_dir`. If the file is missing, a `FileNotFoundError` is raised.
+The LlamaLayerCollector class serves as your central interface to the package's functionality. Here's what you need to know about its key parameters:
 
-### Commonly Used Methods
+#### Required Parameters:
+- `model_dir`: Path to your model directory containing shards and configuration
+- `device`: Target device for tensor operations ("cpu" or "cuda")
+- `dtype`: Desired numerical precision (default: torch.float16)
 
-*   **`load_input_embedding()`**  
-    Loads and returns a PyTorch `Embedding` layer for token embeddings.
-    
-*   **`load_norm()`**  
-    Returns the RMSNorm layer (`LlamaRMSNorm` in Llama-based models) with loaded weights.
-    
-*   **`load_head()`**  
-    Provides a linear layer for the LM head. If the head weights are not found, it defaults to using the input embedding weights.
-    
-*   **`load_layer_set(start_layer: int, end_layer: int)`**  
-    Loads a specified range of decoder layers (e.g., from layer `0` to layer `5`), returning them as a list.
-    
+#### Optional Parameters:
+- `cache_file`: Location for storing shard metadata
+- `shard_pattern`: Custom regex for matching shard files
+- `layer_prefix`: Prefix for identifying decoder layers
+- Various layer name parameters for custom architectures
 
-* * *
+## 💻 Example Usage
 
-Example Usage
--------------
-
-Below is a minimal example demonstrating how to load a Llama model’s layers individually, tokenize an input, and run a partial forward pass. This setup is particularly useful for memory-constrained environments or for debugging/tracing through specific model layers.
+Here's how you might use Llama Layer Collector in practice:
 
 ```python
 from llama_layer_collector import LlamaLayerCollector
-from llama_layer_collector.compute import compute_embedding, compute_layer, compute_head 
-from transformers import AutoTokenizer  
+from llama_layer_collector.compute import compute_embedding, compute_layer, compute_head
+from transformers import AutoTokenizer
+import torch
 
-# Specify the directory containing your model checkpoints and configuration. 
-model_directory = "/path/to/llama/model"  
-cache_file = "model_cache.json"    
-# Create a collector instance with desired settings. 
-collector = LlamaLayerCollector(     
-    model_dir=model_directory,     
-    cache_file=cache_file,     
-    device="cuda",  # or "cpu"     
-    dtype=torch.float16 
-)  
-# Load tokenizer from Transformers. 
-tokenizer = AutoTokenizer.from_pretrained(model_directory) 
-input_ids = tokenizer("The quick brown fox ", return_tensors='pt')['input_ids']  
+# Initialize core components
+collector = LlamaLayerCollector(
+    model_dir="/path/to/model",
+    cache_file="cache.json",
+    device="cuda",
+    dtype=torch.float16
+)
 
-# Load the input embedding layer. 
-embedding = collector.load_input_embedding()  
+# Set up tokenization
+tokenizer = AutoTokenizer.from_pretrained("/path/to/model")
+input_text = "The quick brown fox"
+input_ids = tokenizer(input_text, return_tensors='pt')['input_ids']
 
-# Load the normalization layer. 
-norm = collector.load_norm()  
+# Load model components
+embedding = collector.load_input_embedding()
+norm = collector.load_norm()
+head = collector.load_head()
+layers = collector.load_layer_set(0, collector.num_layers - 1)
 
-# Load the LM head (fallbacks to embedding if not available). 
-head = collector.load_head()  
+# Execute forward pass
+state = compute_embedding(embedding, input_ids, collector.config)
+for layer in layers:
+    state.state = compute_layer(layer, state)
 
-# Load a set of decoder layers (in this example, all layers). 
-layers = collector.load_layer_set(0, collector.num_layers - 1)  
-
-# Perform a forward pass using the helper computation functions. 
-state = compute_embedding(embedding, input_ids, collector.config) 
-for lyr in layers:     
-    state.state = compute_layer(lyr, state)
-
-# Compute final output logits and retrieve the top predicted token ID. 
-result = compute_head(head, norm(state.state), topk=1) 
-print(f'Top predicted token ID: {result}')
+# Generate predictions
+predictions = compute_head(head, norm(state.state), topk=1)
 ```
-1.  **Initialize the Collector**:  
-    The `LlamaLayerCollector` scans your model directory, identifies shard files, and (optionally) caches metadata for fast reuse. 
-2.  **Load Model Pieces**:  
-    Grab individual components (embeddings, normalization, head, and a range of layers) as needed. 
-3.  **Partial or Full Computation**:  
-    Use the provided functions in `llama_layer_collector.compute` to sequentially pass data through each layer. This is especially handy for stepping through intermediate activations or customizing layer outputs.
-4.  **Retrieve Predictions**:  
-    Pass the final hidden state through the LM head, apply a softmax, and retrieve top-k token IDs.
-    
 
-* * *
+## Optimal Use Cases
 
-When to Use This Package
-------------------------
+### Resource-Constrained Environments
+Perfect for scenarios where loading entire models is impractical or impossible. Load only the layers you need, when you need them.
 
-*   **Memory Constraints**: If your environment cannot hold an entire Llama model in memory, load only the layers you need.
-*   **Debugging**: Trace the forward pass one layer at a time for analyzing intermediate states.
-*   **Research & Development**: Experiment with custom modifications to specific layers or partial fine-tuning without instantiating the full model.
+### Model Development
+Ideal for researchers and developers who need to:
+- Analyze intermediate layer outputs
+- Experiment with architectural modifications
+- Implement custom layer combinations
+- Debug model behavior at a granular level
 
-* * *
+### Production Optimization
+Streamline production deployments by loading only essential model components, reducing memory footprint and improving resource utilization.
 
-Additional Notes
-----------------
+## ⚙️ Technical Details
 
-*   **Shard Pattern**: By default, we look for files named `model-<NUM>-of-<NUM>.safetensors`. You can override this pattern in the constructor if your files follow a different naming convention.
-*   **Caching**: A JSON cache file (e.g., `model_cache.json`) is automatically created and updated by the collector for quick retrieval of shard file information.
-*   **Helper Compute Functions**:
-    *   `compute_embedding`: Prepares the input embedding state and sets up the causal mask.
-    *   `compute_layer`: Passes the current hidden state through a `LlamaDecoderLayer`.
-    *   `compute_head`: Applies the final linear head to generate logits, then returns the top token(s).
+### Shard Management
+- Default pattern: `model-<NUM>-of-<NUM>.safetensors`
+- Customizable through constructor parameters
+- Efficient metadata caching via JSON
 
-* * *
-
-Contributing
-------------
-
-Feedback, bug reports, and pull requests are welcome! Please open an issue or submit a PR on GitHub if you have any ideas for improvements or new features.
-
-* * *
-
-License
--------
-
-This project is released under the MIT License.
+### Computation Pipeline
+Our helper functions provide a streamlined approach to model operations:
+- `compute_embedding`: Handles input embedding and causal mask setup
+- `compute_layer`: Manages state transitions through decoder layers
+- `compute_head`: Processes final linear projections and token prediction
