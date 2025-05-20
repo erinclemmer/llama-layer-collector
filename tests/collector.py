@@ -68,6 +68,11 @@ class LlamaLayerCollectorTests(unittest.TestCase):
         input_ids = tokenizer(PROMPT, return_tensors="pt")['input_ids']
         state = compute_embedding(input_embedder, input_ids, collector.config)
 
+    def test_gpu_layers(self):
+        collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B, device="cuda")
+        layers = collector.load_layer_set(0, 5, "cuda")
+        self.assertEqual("cuda:0", str(layers[0].self_attn.q_proj.weight.device))
+
     def test_input_embedding_1B(self):
         collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
         input_embedder = collector.load_input_embedding()

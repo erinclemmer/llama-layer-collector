@@ -1,4 +1,5 @@
 import gc
+import torch
 from typing import List, Dict
 
 from safetensors import safe_open
@@ -41,6 +42,7 @@ def load_layers(
     ) -> List[LlamaDecoderLayer]:
     prefixes = [f'{layer_prefix}{i}.' for i in range(start_layer, end_layer+1)]
     shard_data = { }
+    torch.set_default_device(device)
     for file_path in files_to_load_for_layers(start_layer, end_layer, layer_prefix, layer_file_cache):
         full_path = f'{model_dir}/{file_path}'
         shard: dict = safe_open(full_path, framework='pt', device=device)
@@ -60,5 +62,6 @@ def load_layers(
                 layer_data[key.replace(f'{layer_prefix}{i}.', '')] = shard_data[key].detach()
         lyr.load_state_dict(layer_data)
         layers.append(lyr)
+    torch.set_default_device('cpu')
 
     return layers
