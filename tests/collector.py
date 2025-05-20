@@ -61,6 +61,13 @@ class LlamaLayerCollectorTests(unittest.TestCase):
             cache = json.load(f)
             self.assertEqual(len(cache.keys()), NUM_KEYS_8B)
     
+    def test_gpu_input_embedding(self):
+        collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B, device="cuda")
+        input_embedder = collector.load_input_embedding()
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR_1B)
+        input_ids = tokenizer(PROMPT, return_tensors="pt")['input_ids']
+        state = compute_embedding(input_embedder, input_ids, collector.config)
+
     def test_input_embedding_1B(self):
         collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
         input_embedder = collector.load_input_embedding()

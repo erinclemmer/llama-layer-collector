@@ -14,11 +14,12 @@ def compute_embedding(
         input_ids: torch.Tensor,
         config: LlamaConfig
     ) -> LLmComputationState:
-    embedded_input = input_embedder(input_ids.to(input_embedder.weight.device))
+    device = input_embedder.weight.device
+    embedded_input = input_embedder(input_ids.to(device))
     state = LLmComputationState()
     state.state = embedded_input
-    state.cache_position = torch.arange(0, end=embedded_input.size(1), device='cpu')
-    state.causal_mask = update_causal_mask(config, embedded_input.detach().to('cpu'), state.cache_position)
+    state.cache_position = torch.arange(0, end=embedded_input.size(1), device=device)
+    state.causal_mask = update_causal_mask(config, embedded_input.detach().to(device), state.cache_position)
     state.position_ids = state.cache_position.unsqueeze(0)
     state.position_embeddings = LlamaRotaryEmbedding(config=config)(embedded_input.detach(), state.position_ids)
     return state
