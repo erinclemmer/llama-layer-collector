@@ -124,7 +124,7 @@ class LlamaLayerCollectorTests(unittest.TestCase):
 
     def test_layers_8B(self):
         collector = LlamaLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
-        layers = collector.load_layer_set(1, 2)
+        layers = collector.load_layer_set(0, 1)
         self.assertEqual(len(layers), 2)
 
     def test_stack_1B(self):

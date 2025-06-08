@@ -30,16 +30,15 @@ def files_to_load_for_layers(
                 files_to_load.append(f)
     return files_to_load
 
-def load_layers(
-        start_layer: int, 
-        end_layer: int, 
+def get_shard_data(
+        start_layer: int,
+        end_layer: int,
+        device: str,
+        model_dir: str,
         layer_prefix: str,
         layer_file_cache: Dict[str, str],
-        config: LlamaConfig,
-        model_dir: str,
-        device: str,
         dtype: str
-    ) -> List[LlamaDecoderLayer]:
+    ) -> Dict[str, torch.Tensor]:
     prefixes = [f'{layer_prefix}{i}.' for i in range(start_layer, end_layer+1)]
     shard_data = { }
     torch.set_default_device(device)
@@ -52,16 +51,37 @@ def load_layers(
                     shard_data[key] = shard.get_tensor(key).detach().to(dtype)
         del shard
         gc.collect()
-    
+    return shard_data
+
+def load_layer(
+        config: LlamaConfig, 
+        idx: int, 
+        shard_data: Dict,
+        layer_prefix: str,
+        dtype: str
+    ) -> LlamaDecoderLayer:
+    lyr = LlamaDecoderLayer(config, idx)
+    layer_data = { }
+    for key in shard_data.keys():
+        if key.startswith(f'{layer_prefix}{idx}.'):
+            layer_data[key.replace(f'{layer_prefix}{idx}.', '')] = shard_data[key]
+    lyr.load_state_dict(layer_data)
+    return lyr.to(dtype)
+
+def load_layers(
+        start_layer: int, 
+        end_layer: int, 
+        layer_prefix: str,
+        layer_file_cache: Dict[str, str],
+        config: LlamaConfig,
+        model_dir: str,
+        device: str,
+        dtype: str
+    ) -> List[LlamaDecoderLayer]:
+    shard_data = get_shard_data(start_layer, end_layer, device, model_dir, layer_prefix, layer_file_cache, dtype)
     layers = []
     for i in range(start_layer, end_layer+1):
-        lyr = LlamaDecoderLayer(config, i).to(dtype=dtype)
-        layer_data = { }
-        for key in shard_data.keys():
-            if key.startswith(f'{layer_prefix}{i}.'):
-                layer_data[key.replace(f'{layer_prefix}{i}.', '')] = shard_data[key].detach()
-        lyr.load_state_dict(layer_data)
-        layers.append(lyr)
-    torch.set_default_device('cpu')
+        layers.append(load_layer(config, i, shard_data, layer_prefix, dtype))
 
+    torch.set_default_device('cpu')
     return layers

@@ -1,6 +1,7 @@
 import os
+import gc
 import json
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import torch
 from transformers.models.llama.modeling_llama import LlamaRMSNorm, LlamaDecoderLayer, LlamaConfig
@@ -103,6 +104,10 @@ class LlamaLayerCollector:
         head.weight = torch.nn.Parameter(weight)
         return head
 
-    def load_layer_set(self, start_layer: int, end_layer: int, device: str = None) -> List[LlamaDecoderLayer]:
+    def load_layer_set(self, start_layer: int, end_layer: int, device: Optional[str] = None) -> List[LlamaDecoderLayer]:
         device = self.device if device is None else device
-        return load_layers(start_layer, end_layer, self.layer_prefix, self.layer_files, self.config, self.model_dir, device, self.dtype)
+        layers = []
+        for i in range(start_layer, end_layer+1, 3):
+            layers.extend(load_layers(min(i, end_layer), min(i+2, end_layer), self.layer_prefix, self.layer_files, self.config, self.model_dir, device, self.dtype))
+        gc.collect()
+        return layers
