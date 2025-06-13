@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import unittest
+from time import time
 
 import torch
 from torch import tensor
@@ -20,6 +21,9 @@ MODEL_DIR_1B: str = 'models/Llama3.2-1b-instruct'
 
 CACHE_FILE_8B: str = 'data/Meta-Llama-3-8B-cache.json'
 MODEL_DIR_8B: str = 'models/Meta-Llama-3-8B'
+
+CACHE_FILE_70B: str = 'data/Meta-Llama-3.3-70B-cache.json'
+MODEL_DIR_70B: str = 'models/llama-3.3-70B-Instruct'
 
 NUM_KEYS_1B = 146
 NUM_KEYS_8B = 291
@@ -118,13 +122,24 @@ class LlamaLayerCollectorTests(unittest.TestCase):
         self.assertEqual(head.weight.shape, (128256, 4096))
 
     def test_layers_1B(self):
+        start_time = time()
         collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
-        layers = collector.load_layer_set(1, 2)
-        self.assertEqual(len(layers), 2)
+        layers = collector.load_layer_set(0, 9)
+        print(f"Time: {time() - start_time:.2f}s")
+        self.assertEqual(len(layers), 10)
 
     def test_layers_8B(self):
+        start_time = time()
         collector = LlamaLayerCollector(MODEL_DIR_8B, CACHE_FILE_8B)
+        layers = collector.load_layer_set(0, 9)
+        print(f"Time: {time() - start_time:.2f}s")
+        self.assertEqual(len(layers), 10)
+
+    def test_layers_70B(self):
+        start_time = time()
+        collector = LlamaLayerCollector(MODEL_DIR_70B, CACHE_FILE_70B)
         layers = collector.load_layer_set(0, 1)
+        print(f"Time: {time() - start_time:.2f}s")
         self.assertEqual(len(layers), 2)
 
     def test_stack_1B(self):
