@@ -64,14 +64,18 @@ def load_layer(
         idx: int, 
         shard_data: Dict,
         layer_prefix: str,
+        device: str,
         dtype: str
     ) -> LlamaDecoderLayer:
+    torch.set_default_device('meta')
     lyr = LlamaDecoderLayer(config, idx)
+    torch.set_default_device(device)
     layer_data = { }
     for key in shard_data.keys():
         if key.startswith(f'{layer_prefix}{idx}.'):
             layer_data[key.replace(f'{layer_prefix}{idx}.', '')] = shard_data[key]
-    lyr.load_state_dict(layer_data)
+    lyr = lyr.to_empty(device=device)
+    lyr._load_from_state_dict(layer_data, "", {}, True, [], [], [])
     return lyr.to(dtype)
 
 def load_layers(
@@ -88,7 +92,7 @@ def load_layers(
     shard_data = get_shard_data(start_layer, end_layer, device, model_dir, layer_prefix, layer_file_cache, dtype)
     layers = []
     for i in tqdm(range(start_layer, end_layer+1)):
-        layers.append(load_layer(config, i, shard_data, layer_prefix, dtype))
+        layers.append(load_layer(config, i, shard_data, layer_prefix, device, dtype))
 
     torch.set_default_device('cpu')
     return layers
