@@ -3,6 +3,7 @@ import os
 import torch
 from safetensors import safe_open
 from transformers.models.llama.modeling_llama import LlamaConfig, LlamaModel
+from transformers.masking_utils import create_causal_mask
 
 def load_shard_tensor(
         layer_file_cache: dict, 
@@ -17,20 +18,17 @@ def load_shard_tensor(
     shard: dict = safe_open(os.path.join(model_dir, file), framework='pt', device=device)
     return shard.get_tensor(layer_name).to(dtype)
 
+# Changed in https://github.com/huggingface/transformers/pull/37866
 def update_causal_mask(
         config: LlamaConfig,
         input_tensor: torch.Tensor,
         cache_position: torch.Tensor
     ) -> torch.Tensor:
     # In case the provided `attention` mask is 2D, we generate a causal mask here (4D).
-    return LlamaModel._prepare_4d_causal_attention_mask_with_cache_position(
-        None,
-        sequence_length=input_tensor.shape[1],
-        target_length=input_tensor.shape[1],
-        dtype=input_tensor.dtype,
-        device=input_tensor.device,
-        cache_position=cache_position,
-        batch_size=input_tensor.shape[0],
+    return create_causal_mask(
         config=config,
+        input_embeds=input_tensor,
+        cache_position=cache_position,
         past_key_values=None,
+        attention_mask=None
     )

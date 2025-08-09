@@ -4,7 +4,8 @@ import json
 from typing import List, Dict, Optional
 
 import torch
-from transformers.models.llama.modeling_llama import LlamaRMSNorm, LlamaDecoderLayer, LlamaConfig
+from transformers.models.llama.modeling_llama import LlamaRMSNorm, LlamaDecoderLayer
+from transformers.models.llama.configuration_llama import LlamaConfig
 
 from llama_layer_collector.load_layer import load_layers
 from llama_layer_collector.cache import build_cache_data

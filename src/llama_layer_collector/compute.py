@@ -37,7 +37,7 @@ def compute_layer(
         use_cache=False,
         cache_position=state.cache_position,
         position_embeddings=state.position_embeddings
-    )[0]
+    )
 
 def compute_head(
         head: torch.nn.Linear,
