@@ -71,11 +71,13 @@ def load_layer(
     lyr = LlamaDecoderLayer(config, idx)
     torch.set_default_device(device)
     layer_data = { }
+    lyr = lyr.to_empty(device=device)
     for key in shard_data.keys():
         if key.startswith(f'{layer_prefix}{idx}.'):
-            layer_data[key.replace(f'{layer_prefix}{idx}.', '')] = shard_data[key]
-    lyr = lyr.to_empty(device=device)
-    lyr._load_from_state_dict(layer_data, "", {}, True, [], [], [])
+            module_name = key.replace(f'{layer_prefix}{idx}.', '').replace('.weight', '')
+            module = lyr.get_submodule(module_name)
+            module.load_state_dict({ "weight": shard_data[key] })
+
     return lyr.to(dtype)
 
 def load_layers(

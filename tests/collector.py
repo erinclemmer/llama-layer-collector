@@ -17,7 +17,7 @@ from llama_layer_collector.helpers import load_shard_tensor
 from llama_layer_collector.load_layer import files_to_load_for_layer
 
 CACHE_FILE_1B: str = 'data/Llama3.2-1b-instruct-cache.json'
-MODEL_DIR_1B: str = 'models/Llama3.2-1b-instruct'
+MODEL_DIR_1B: str = 'models/Llama-3.2-1b-Instruct'
 
 CACHE_FILE_8B: str = 'data/Meta-Llama-3-8B-cache.json'
 MODEL_DIR_8B: str = 'models/Meta-Llama-3-8B'
