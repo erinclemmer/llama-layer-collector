@@ -1,6 +1,7 @@
 import os
 import gc
 import json
+import tqdm
 from typing import List, Dict, Optional
 
 import torch
@@ -108,7 +109,9 @@ class LlamaLayerCollector:
     def load_layer_set(self, start_layer: int, end_layer: int, device: Optional[str] = None) -> List[LlamaDecoderLayer]:
         device = self.device if device is None else device
         layers = []
-        for i in range(start_layer, end_layer+1, 3):
+        for i in tqdm.tqdm(range(start_layer, end_layer+1)):
+            if i % 3 != 0:
+                continue
             layers.extend(load_layers(min(i, end_layer), min(i+2, end_layer), self.layer_prefix, self.layer_files, self.config, self.model_dir, device, self.dtype))
         gc.collect()
         return layers

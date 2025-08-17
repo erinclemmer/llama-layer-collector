@@ -1,7 +1,6 @@
 import gc
 import torch
 from time import time
-from tqdm import tqdm
 from typing import List, Dict
 
 from safetensors import safe_open
@@ -44,9 +43,7 @@ def get_shard_data(
     prefixes = [f'{layer_prefix}{i}.' for i in range(start_layer, end_layer+1)]
     shard_data = { }
     start_time = time()
-    print('Loading data from files:')
     for file_path in files_to_load_for_layers(start_layer, end_layer, layer_prefix, layer_file_cache):
-        print(file_path)
         full_path = f'{model_dir}/{file_path}'
         shard: dict = safe_open(full_path, framework='pt', device=device)
         for key in shard.keys():
@@ -56,7 +53,6 @@ def get_shard_data(
         del shard
         gc.collect()
     
-    print(f"Loaded data in: {time() - start_time:.2f}s")
     return shard_data
 
 def load_layer(
@@ -93,7 +89,7 @@ def load_layers(
     torch.set_default_device(device)
     shard_data = get_shard_data(start_layer, end_layer, device, model_dir, layer_prefix, layer_file_cache, dtype)
     layers = []
-    for i in tqdm(range(start_layer, end_layer+1)):
+    for i in range(start_layer, end_layer+1):
         layers.append(load_layer(config, i, shard_data, layer_prefix, device, dtype))
 
     torch.set_default_device('cpu')
