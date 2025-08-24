@@ -4,10 +4,12 @@ import torch
 from transformers.configuration_utils import PretrainedConfig
 from transformers.models.llama.modeling_llama import LlamaRotaryEmbedding
 from transformers.models.qwen3.modeling_qwen3 import Qwen3RotaryEmbedding
+from transformers.models.gemma3.modeling_gemma3 import Gemma3RotaryEmbedding
 
 mapper = {
     "llama": LlamaRotaryEmbedding,
-    "qwen3": Qwen3RotaryEmbedding
+    "qwen3": Qwen3RotaryEmbedding,
+    "gemma3_text": Gemma3RotaryEmbedding
 }
 
 def getClass(config: PretrainedConfig) -> torch.nn.Module:

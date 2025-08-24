@@ -1,16 +1,11 @@
+import copy
 import torch
 from transformers.configuration_utils import PretrainedConfig
 from transformers.masking_utils import create_causal_mask
 
 from llama_layer_collector.auto.auto_rotary import AutoRotaryEmbedding
 from llama_layer_collector.auto.auto_layer import AutoDecoderLayer
-
-class LLmComputationState:
-    state: torch.Tensor
-    position_embeddings: torch.Tensor
-    position_ids: torch.Tensor
-    cache_position: torch.Tensor
-    causal_mask: torch.Tensor
+from llama_layer_collector.state_obj import LLmComputationState
 
 # TODO Allow use_cache
 def compute_embedding(
@@ -32,21 +27,16 @@ def compute_embedding(
         past_key_values=None,
         position_ids=state.position_ids
     )
-    state.position_embeddings = AutoRotaryEmbedding(config)(embedded_input.detach(), state.position_ids)
+    if config.model_type == 'gemma3_text':
+        state.position_embeddings_global = AutoRotaryEmbedding(config)(embedded_input.detach(), state.position_ids)
+        configCopy = copy.deepcopy(config)
+        configCopy.rope_theta = configCopy.rope_local_base_freq
+        configCopy.rope_scaling = {"rope_type": "default"}
+        
+        state.position_embeddings_local = AutoRotaryEmbedding(configCopy)(embedded_input.detach(), state.position_ids)
+    else:
+        state.position_embeddings = AutoRotaryEmbedding(config)(embedded_input.detach(), state.position_ids)
     return state
-
-def compute_layer(
-        lyr: AutoDecoderLayer,
-        state: LLmComputationState 
-    ) -> torch.Tensor:
-    return lyr(
-        state.state,
-        attention_mask=state.causal_mask,
-        position_ids=state.position_ids,
-        past_key_values=None,
-        cache_position=state.cache_position,
-        position_embeddings=state.position_embeddings
-    )
 
 def compute_head(
         head: torch.nn.Linear,

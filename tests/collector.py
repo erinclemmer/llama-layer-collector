@@ -11,16 +11,19 @@ from transformers import AutoTokenizer
 sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
 
 from llama_layer_collector.layer_collector import LlamaLayerCollector
-from llama_layer_collector.compute import compute_embedding, compute_head, compute_layer
+from llama_layer_collector.compute import compute_embedding, compute_head
 from llama_layer_collector.cache import get_shard_files
 from llama_layer_collector.helpers import load_shard_tensor
 from llama_layer_collector.load_layer import files_to_load_for_layer
 
-CACHE_FILE_1B: str = 'data/Llama3.2-1b-instruct-cache.json'
-MODEL_DIR_1B: str = 'models/Llama-3.2-1b-Instruct'
+CACHE_FILE_1B: str = 'data/Llama3.2-1B-instruct-cache.json'
+MODEL_DIR_1B: str = 'models/Llama-3.2-1B-Instruct'
 
 CACHE_FILE_Q2B: str = 'data/Qwen3-1.7B-cache.json'
 MODEL_DIR_Q2B: str = 'models/Qwen3-1.7B'
+
+CACHE_FILE_G1B: str = 'data/Gemma-3-270m-it-cache.json'
+MODEL_DIR_G1B: str = 'models/Gemma-3-270m-it'
 
 CACHE_FILE_8B: str = 'data/Meta-Llama-3-8B-cache.json'
 MODEL_DIR_8B: str = 'models/Meta-Llama-3-8B'
@@ -144,10 +147,43 @@ class LlamaLayerCollectorTests(unittest.TestCase):
         self.assertEqual(len(layers), 2)
 
     def test_stack_1B(self):
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR_Q2B)
-        input_ids = tokenizer(PROMPT, return_tensors='pt')['input_ids']
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR_1B)
+        chat = [
+            {"role": "system", "content": "You are a friendly chatbot who always responds in the style of a pirate",},
+            {"role": "user", "content": "How many helicopters can a human eat in one sitting?"},
+        ]
+        input_ids = tokenizer.apply_chat_template(chat, tokenize=True, add_generation_prompt=True, return_tensors='pt')
         original_num_tokens = input_ids.shape[1]
-        num_tokens = 4
+        num_tokens = 40
+        current_token = 0
+        collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
+        input_embedder = collector.load_input_embedding()
+        head = collector.load_head()
+        norm = collector.load_norm()
+        layers = collector.load_layer_set(0, 15)
+        while current_token < num_tokens:
+            state = compute_embedding(input_embedder, input_ids, collector.config)
+            for lyr in layers:
+                state.state = compute_layer(lyr, state)
+            topk = 1
+            result = compute_head(head, norm(state.state), topk)
+            self.assertEqual(result.shape, (1, topk))
+            token_list = input_ids.tolist()[0]
+            token_list.append(result[0][0].item())
+            input_ids = tensor([token_list])
+            current_token += 1
+        print(tokenizer.decode(input_ids[0]))
+        self.assertGreater(input_ids.shape[1], original_num_tokens)
+
+    def test_stack_Qwen2B(self):
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR_Q2B)
+        chat = [
+            {"role": "system", "content": "You are a friendly chatbot who always responds in the style of a pirate",},
+            {"role": "user", "content": "How many helicopters can a human eat in one sitting?"},
+        ]
+        input_ids = tokenizer.apply_chat_template(chat, tokenize=True, add_generation_prompt=True, return_tensors='pt')
+        original_num_tokens = input_ids.shape[1]
+        num_tokens = 40
         current_token = 0
         collector = LlamaLayerCollector(MODEL_DIR_Q2B, CACHE_FILE_Q2B)
         input_embedder = collector.load_input_embedding()
@@ -165,7 +201,38 @@ class LlamaLayerCollectorTests(unittest.TestCase):
             token_list.append(result[0][0].item())
             input_ids = tensor([token_list])
             current_token += 1
-        print(tokenizer.decode(input_ids[0]))
+            print(current_token)
+            print(tokenizer.decode(input_ids[0]))
+        self.assertGreater(input_ids.shape[1], original_num_tokens)
+
+    def test_stack_Gemma1B(self):
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR_G1B)
+        chat = [
+            {"role": "system", "content": "You are a friendly chatbot who always responds in the style of a pirate",},
+            {"role": "user", "content": "How many helicopters can a human eat in one sitting?"},
+        ]
+        input_ids = tokenizer.apply_chat_template(chat, tokenize=True, add_generation_prompt=True, return_tensors='pt')
+        original_num_tokens = input_ids.shape[1]
+        num_tokens = 40
+        current_token = 0
+        collector = LlamaLayerCollector(MODEL_DIR_G1B, CACHE_FILE_G1B)
+        input_embedder = collector.load_input_embedding()
+        head = collector.load_head()
+        norm = collector.load_norm()
+        layers = collector.load_layer_set(0, 15)
+        while current_token < num_tokens:
+            state = compute_embedding(input_embedder, input_ids, collector.config)
+            for lyr in layers:
+                state.state = lyr(state)
+            topk = 1
+            result = compute_head(head, norm(state.state), topk)
+            self.assertEqual(result.shape, (1, topk))
+            token_list = input_ids.tolist()[0]
+            token_list.append(result[0][0].item())
+            input_ids = tensor([token_list])
+            current_token += 1
+            print(current_token)
+            print(f"\"{tokenizer.decode(input_ids[0])}\"")
         self.assertGreater(input_ids.shape[1], original_num_tokens)
 
     def test_stack_1B_no_cache_file(self):
