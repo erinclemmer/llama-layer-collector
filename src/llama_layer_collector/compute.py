@@ -1,7 +1,9 @@
 import torch
-from llama_layer_collector.helpers import update_causal_mask
+from transformers.configuration_utils import PretrainedConfig
 from transformers.masking_utils import create_causal_mask
-from transformers.models.llama.modeling_llama import LlamaDecoderLayer, LlamaConfig, LlamaRotaryEmbedding, LlamaRMSNorm
+
+from llama_layer_collector.auto.auto_rotary import AutoRotaryEmbedding
+from llama_layer_collector.auto.auto_layer import AutoDecoderLayer
 
 class LLmComputationState:
     state: torch.Tensor
@@ -14,7 +16,7 @@ class LLmComputationState:
 def compute_embedding(
         input_embedder: torch.nn.Embedding,
         input_ids: torch.Tensor,
-        config: LlamaConfig
+        config: PretrainedConfig
     ) -> LLmComputationState:
     device = input_embedder.weight.device
     embedded_input = input_embedder(input_ids.to(device))
@@ -30,18 +32,18 @@ def compute_embedding(
         past_key_values=None,
         position_ids=state.position_ids
     )
-    state.position_embeddings = LlamaRotaryEmbedding(config=config)(embedded_input.detach(), state.position_ids)
+    state.position_embeddings = AutoRotaryEmbedding(config)(embedded_input.detach(), state.position_ids)
     return state
 
 def compute_layer(
-        lyr: LlamaDecoderLayer,
+        lyr: AutoDecoderLayer,
         state: LLmComputationState 
     ) -> torch.Tensor:
     return lyr(
         state.state,
         attention_mask=state.causal_mask,
         position_ids=state.position_ids,
-        past_key_value=None,
+        past_key_values=None,
         cache_position=state.cache_position,
         position_embeddings=state.position_embeddings
     )

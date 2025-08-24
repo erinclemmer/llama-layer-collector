@@ -2,7 +2,7 @@ import os
 
 import torch
 from safetensors import safe_open
-from transformers.models.llama.modeling_llama import LlamaConfig, LlamaModel
+from transformers.configuration_utils import PretrainedConfig
 from transformers.masking_utils import create_causal_mask
 
 def load_shard_tensor(
@@ -20,7 +20,7 @@ def load_shard_tensor(
 
 # Changed in https://github.com/huggingface/transformers/pull/37866
 def update_causal_mask(
-        config: LlamaConfig,
+        config: PretrainedConfig,
         input_tensor: torch.Tensor,
         cache_position: torch.Tensor
     ) -> torch.Tensor:

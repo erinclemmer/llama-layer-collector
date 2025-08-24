@@ -5,12 +5,14 @@ import tqdm
 from typing import List, Dict, Optional
 
 import torch
-from transformers.models.llama.modeling_llama import LlamaRMSNorm, LlamaDecoderLayer
-from transformers.models.llama.configuration_llama import LlamaConfig
+from transformers.configuration_utils import PretrainedConfig
+from transformers.models.auto import AutoConfig
 
 from llama_layer_collector.load_layer import load_layers
 from llama_layer_collector.cache import build_cache_data
 from llama_layer_collector.helpers import load_shard_tensor
+from llama_layer_collector.auto.auto_rms import AutoRMSNorm
+from llama_layer_collector.auto.auto_layer import AutoDecoderLayer
 
 class LlamaLayerCollector:
     layer_prefix: str
@@ -19,7 +21,7 @@ class LlamaLayerCollector:
     lm_head_name: str
     shard_pattern: str
     
-    config: LlamaConfig
+    config: PretrainedConfig
     
     model_dir: str
     cache_file: str
@@ -33,7 +35,7 @@ class LlamaLayerCollector:
     def __init__(
             self, 
             model_dir: str,
-            cache_file: str = None,
+            cache_file: Optional[str] = None,
             shard_pattern: str = r'model-(\d+)-of-(\d+).safetensors',
             layer_prefix: str = 'model.layers.',
             input_embedding_layer_name: str = 'model.embed_tokens.weight',
@@ -46,13 +48,11 @@ class LlamaLayerCollector:
         if not os.path.exists(config_file_path):
             raise FileNotFoundError('Could not find config file ' + config_file_path)
         
-        with open(config_file_path, 'r', encoding='utf-8') as f:
-            self.config = LlamaConfig.from_dict(json.load(f))
-            self.num_layers = self.config.num_hidden_layers
-
+        config = AutoConfig.from_pretrained(model_dir)
+        self.config = config
+        self.num_layers = self.config.num_hidden_layers
         
         self.model_dir = model_dir
-        self.cache_file = cache_file
         
         self.lm_head_name = lm_head_name
         self.layer_prefix = layer_prefix
@@ -63,7 +63,11 @@ class LlamaLayerCollector:
         self.dtype = dtype
         self.device = device
         self.layer_files = { }
-        if self.cache_file is None or not os.path.exists(self.cache_file):
+        if cache_file is None:
+            raise Exception("Must provide cache file path")
+        self.cache_file = cache_file
+
+        if not os.path.exists(self.cache_file):
             self._build_cache()
         else:
             self._read_cache()
@@ -83,17 +87,17 @@ class LlamaLayerCollector:
     def _load_shard_tensor(self, layer_name: str, device: str) -> torch.Tensor:
         return load_shard_tensor(self.layer_files, self.model_dir, layer_name, device, self.dtype)
 
-    def load_input_embedding(self, device: str = None) -> torch.nn.Embedding:
+    def load_input_embedding(self, device: Optional[str] = None) -> torch.nn.Embedding:
         device = self.device if device is None else device
         return torch.nn.Embedding.from_pretrained(self._load_shard_tensor(self.input_embedding_layer_name, device))
     
-    def load_norm(self, device: str = None) -> LlamaRMSNorm:
+    def load_norm(self, device: Optional[str] = None) -> AutoRMSNorm:
         device = self.device if device is None else device
-        norm = LlamaRMSNorm(self.config.hidden_size, eps=self.config.rms_norm_eps)
+        norm = AutoRMSNorm(self.config)
         norm.weight = torch.nn.Parameter(self._load_shard_tensor(self.norm_layer_name, device))
         return norm
     
-    def load_head(self, device: str = None) -> torch.nn.Linear:
+    def load_head(self, device: Optional[str] = None) -> torch.nn.Linear:
         device = self.device if device is None else device
         weight = None
         
@@ -106,7 +110,7 @@ class LlamaLayerCollector:
         head.weight = torch.nn.Parameter(weight)
         return head
 
-    def load_layer_set(self, start_layer: int, end_layer: int, device: Optional[str] = None) -> List[LlamaDecoderLayer]:
+    def load_layer_set(self, start_layer: int, end_layer: int, device: Optional[str] = None) -> List[AutoDecoderLayer]:
         device = self.device if device is None else device
         layers = []
         for i in tqdm.tqdm(range(start_layer, end_layer+1)):

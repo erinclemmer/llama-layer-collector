@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling", "transformers", "torch", "safetensors"]
+requires = ["hatchling", "transformers", "torch", "safetensors", "protobuf"]
 build-backend = "hatchling.build"
 
 [project]
@@ -25,7 +25,8 @@ dependencies = [
     "transformers",
     "torch",
     "safetensors",
-    "tqdm"
+    "tqdm",
+    "protobuf"
 ]
 
 [project.urls]

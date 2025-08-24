@@ -4,7 +4,8 @@ from time import time
 from typing import List, Dict
 
 from safetensors import safe_open
-from transformers.models.llama.modeling_llama import LlamaDecoderLayer, LlamaConfig
+from transformers.configuration_utils import PretrainedConfig
+from llama_layer_collector.auto.auto_layer import AutoDecoderLayer
 
 def files_to_load_for_layer(
         layer_prefix: str,
@@ -56,15 +57,15 @@ def get_shard_data(
     return shard_data
 
 def load_layer(
-        config: LlamaConfig, 
+        config: PretrainedConfig, 
         idx: int, 
         shard_data: Dict,
         layer_prefix: str,
         device: str,
         dtype: str
-    ) -> LlamaDecoderLayer:
+    ) -> AutoDecoderLayer:
     torch.set_default_device('meta')
-    lyr = LlamaDecoderLayer(config, idx)
+    lyr = AutoDecoderLayer(config, idx)
     torch.set_default_device(device)
     layer_data = { }
     lyr = lyr.to_empty(device=device)
@@ -81,11 +82,11 @@ def load_layers(
         end_layer: int, 
         layer_prefix: str,
         layer_file_cache: Dict[str, str],
-        config: LlamaConfig,
+        config: PretrainedConfig,
         model_dir: str,
         device: str,
         dtype: str
-    ) -> List[LlamaDecoderLayer]:
+    ) -> List[AutoDecoderLayer]:
     torch.set_default_device(device)
     shard_data = get_shard_data(start_layer, end_layer, device, model_dir, layer_prefix, layer_file_cache, dtype)
     layers = []

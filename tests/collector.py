@@ -19,6 +19,9 @@ from llama_layer_collector.load_layer import files_to_load_for_layer
 CACHE_FILE_1B: str = 'data/Llama3.2-1b-instruct-cache.json'
 MODEL_DIR_1B: str = 'models/Llama-3.2-1b-Instruct'
 
+CACHE_FILE_Q2B: str = 'data/Qwen3-1.7B-cache.json'
+MODEL_DIR_Q2B: str = 'models/Qwen3-1.7B'
+
 CACHE_FILE_8B: str = 'data/Meta-Llama-3-8B-cache.json'
 MODEL_DIR_8B: str = 'models/Meta-Llama-3-8B'
 
@@ -33,8 +36,6 @@ PROMPT = "The quick brown fox jumps over the "
 class LlamaLayerCollectorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.assertTrue(os.path.exists(MODEL_DIR_1B), "1B Model does not exist for testing, please download Llama3.2-1b-instruct")
-        cls.assertTrue(os.path.exists(MODEL_DIR_8B), "8B Model does not exist for testing, please download Llama3-8b")
         if os.path.exists(CACHE_FILE_1B):
             os.remove(CACHE_FILE_1B)
         if os.path.exists(CACHE_FILE_8B):
@@ -143,12 +144,12 @@ class LlamaLayerCollectorTests(unittest.TestCase):
         self.assertEqual(len(layers), 2)
 
     def test_stack_1B(self):
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR_1B)
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR_Q2B)
         input_ids = tokenizer(PROMPT, return_tensors='pt')['input_ids']
         original_num_tokens = input_ids.shape[1]
         num_tokens = 4
         current_token = 0
-        collector = LlamaLayerCollector(MODEL_DIR_1B, CACHE_FILE_1B)
+        collector = LlamaLayerCollector(MODEL_DIR_Q2B, CACHE_FILE_Q2B)
         input_embedder = collector.load_input_embedding()
         head = collector.load_head()
         norm = collector.load_norm()
